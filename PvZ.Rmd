@@ -1,0 +1,154 @@
+---
+title: "Analisis de Plants vs Zombies"
+author: "Ari Castillo"
+output:
+  pdf_document:
+    toc: true
+  html_document:
+    theme:
+      base_font: Patrick Hand
+      heading_font: Patrick Hand
+      bg: '#F3F4F6'
+      fg: '#2E2E2E'
+      primary: '#32CD32'
+      secondary: '#8B4513'
+      success: '#FFD700'
+      danger: '#FF4500'
+    highlight: tango
+    toc: true
+    toc_float: true
+---
+
+# Analisis de variables aleatorias: "Lanzamaiz vs Dr. Zomboss"
+
+## Introduccion
+
+Estaba jugando el primer plantas vs zombies cuando me puse a pensar, cuanto daño hacen las plantas realmente, dado que si bien se pueden contabilizar por ejemplo, los aciertos ante un zombie normal, resulta complicado cuantificar que tan eficaces son estas ante zombies mas resistentes, dado asi, me puse a pensar en la que es personalmente mi planta favorita: 'Lanzamaíz'.
+
+### Lanzamaíz
+
+Esta planta se obtiene en el escenario final del juego, el tejado, su habilidad consiste en poder lanzar proyectiles que no chocan con el desnivel del tejado, estos proyectiles tienen una probabilidad del 25% de que sean una mantequilla, la cual provoca el doble de daño y paraliza al zombie durante 5s, recordaremos estas estadisticas para el analisis posterior.
+
+```{r}
+shot <- 20
+lucky_shot <- 40
+lucky_shot_prob <- 0.25
+```
+
+### Dr. Zomboss
+
+Por otro lado, el nemesis del tejado, y el enemigo principal de la primera entrega, el Dr. Zomboss. Un zombie que creo un robot gigante con la capacidad de escupir bolas de fuego y hielo que aplastan todas las plantas a su paso. Segun la wikipedia, este posee 40,000 puntos. Un desocupado completamente. Sin embargo, nos servira de punto de referencia para el analisis.
+
+```{r}
+zomboss_hp <- 40000
+```
+
+## Analisis
+
+### Analisis simple
+
+Dentro de este analisis recopilare los datos mas sencillos que podrias sacar, dados los datos de la wiki, sera una vision sencilla de esta, pero abarca puntos que no deben ser dejados sin tocar, tratare de realizar una serie de preguntas para hacer de esta parte algo breve y conciso.
+
+#### Cuantos disparos de Lanzamaiz tomarian para derrotar al Dr. Zomboss?
+
+```{r}
+n_simple_shots <- zomboss_hp / shot
+n_simple_shots
+```
+
+Es una division sencilla, dado que sabemos la vida del Dr. Zomboss y la vida que quita cada disparo del Lanzamaiz, esto se responde con una division.
+
+#### Cuanto tiempo le tomaria al Lanzamaiz derrotar al Dr. Zomboss?
+
+Introducimos una nueva variable a nuestro analisis, la cual es el tiempo de intervalo entre disparos de la Lanzamaiz, el cual segun fuentes confiables (Copilot), es de 3s.
+
+```{r}
+shot_interval <- 3
+n_simple_shots * shot_interval
+```
+
+El resultado lo podemos saber a partir de la multiplicacion de la cantidad de disparos y el tiempo que toma cada uno. Simple, verdad?
+
+## EL Analisis
+
+Ya me aburri de hacer la otra onda y la verdad que tampoco lo queria hacer tan largo, vamos sobre, sabemos que el Lanzamaiz tiene una probabilidad de 25% de acertar un mantecazo con el doble de daño, que la verdad por eso se usa, que sino quien sabe.
+
+Volviendo a la estadistica, esto responde al comportamiento de una variable aleatoria, cosa que podriamos calcular diversos escenario usando las herramientas de R, para crear, por ejemplo, simulaciones de montecarlo que nos ayuden a responder a los comportamientos de esta variable en una distribucion normal, pero dado que eso es muy aburrido y terminaria el analisis en 2 viñetas de codigo, nos vamos a alargar con explicaciones, porque andamos sin nada que hacer.
+
+### Simulaciones de Montecarlo
+
+Para los que no las conozcan, las simulaciones de Montecarlo son las expresiones que decias con tus amigos de "Si peleo 100 veces con un gorila, cuantas veces les gano", si no quedo del todo claro, a medida que avancemos, entenderan a lo que me refiero. Esta herramienta la usaremos en el analisis para simular los disparos de la planta, por ejemplo "De 100 disparos, cuantos son mantecas?".
+
+### Manteca
+
+Anteriormente mencione que dividir la vida del Dr. Zomboss por el daño que hace el Lanzamaiz es aburrido, porque lo es, si bien es un escenario posible, muuuuy improbable, pero posible, es algo que acorta mucho el resultado, y tampoco es muy preciso, la razon de esto es que la manteca juega un rol importante en el daño de el lanzamaiz, a continuacion la demostracion de esto.
+
+#### Demostracion
+
+```{r}
+set.seed(42)
+ x<- sample(c(shot, lucky_shot), 
+            2000, 
+            prob = c(1-lucky_shot_prob, lucky_shot_prob),
+            replace=TRUE
+            )
+ head(x)
+```
+
+Lo que ves arriba es una muestra de la simulacion de los 2000 disparos que dijimos que le tomaria al lanzamaiz derrotar al Dr. Zomboss. Lo sumaremos para saber exactamente cuanta vida quitaria en esta simulacion
+
+```{r}
+sum(x)
+```
+
+Aproximadamente 10,000 mas de lo calculado inicialmente, por que se produce este resultado? Podemos calcularlo? Con estas preguntas nos introducimos la estadistica de variables aleatorias.
+
+### Variables Aleatorias
+
+Antes de hacer grande este nombre de "Las variables aleatorias", dejame introducirte a este concepto de una manera que un jugador de PvZ promedio entenderia, imagina que lanzas una moneda al aire, esta moneda puede caer en cara o cruz, y es un evento que no puede ser predecido con certeza, dado a esto se le llama "aleatorias".
+
+En matematicas y estadistica, esta es la forma elegante a la que llamamos a un valor que obtenemos del azar, y por que lo estamos usando aca? El disparo del lanzamaiz cumple con estas caracteristicas, es un valor (20 o 40 de daño), que obtenemos de una probabilidad. Y dado que ya hubo gente mas desocupada que yo en un pasado que desengloso todas las caracteristicas de estas variables, las usaremos para describir este comportamiento.
+
+### Valor Esperado
+
+El **valor esperado** de una variable aleatoria suena como algo complicado, pero en realidad, es una idea bastante intuitiva. Imagina que estás jugando a un juego de azar. Podrías preguntarte: "Si juego este juego muchas veces, ¿cuánto puedo esperar ganar o perder en promedio?" Esa respuesta, entenado, es el valor esperado y se calcula de la siguiente manera:
+
+![](images/clipboard-1392941302.png)
+
+```{r}
+e_value <- shot*(1-lucky_shot_prob) + lucky_shot * lucky_shot_prob
+e_value
+```
+
+Dicho esto, podriamos decir de que esta es la media de danio por disparo de un lanzamaiz, siendo asi un punto de referencia mas exacto al momento de calcular cuantos disparos hacen falta para matar al Dr. Zomboss. Si vemos detenidamente este valor esperado es casi el mismo comparado a la media obtenida por la simulacion de anteriormente
+
+```{r}
+avgs <- c(mean(x), e_value)
+avgs
+```
+
+### RESPUESTA RAPIDA
+
+Dado que ya tenemos el valor esperado, podemos calcular de mejor medida cuantos disparos tomaria y ya salimos de esto de una vez
+
+```{r}
+real_n_shots <- zomboss_hp / e_value
+real_n_shots
+```
+
+1600 bombazos y pal lobby.
+
+Por el modico tiempo de...
+
+```{r}
+time <- real_n_shots * shot_interval
+time
+```
+
+4800 segundos, unos 80 minutitos para que la mejor planta del mundo gane.
+
+## Conclusion
+
+Bueno, con esta la dejamos mi gente, el Lanzamaíz y el Dr. Zomboss en una batalla épica, pasamos del Lanzamaíz necesitando unos 2000 disparos para llevarse al gigante, a comprender que la mayoria de veces con 1600 serian suficientes. Ya se la saben, pongan atencion en clase, tomen bastante agua, y recuerden que las mates estan en todos lados.
+
+Muchas gracias por leer mi articulo, espero que te haya entretenido tanto como me entretuve haciendolo.
