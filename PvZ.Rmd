@@ -107,11 +107,11 @@ Aproximadamente 10,000 mas de lo calculado inicialmente, por que se produce este
 
 Antes de hacer grande este nombre de "Las variables aleatorias", dejame introducirte a este concepto de una manera que un jugador de PvZ promedio entenderia, imagina que lanzas una moneda al aire, esta moneda puede caer en cara o cruz, y es un evento que no puede ser predecido con certeza, dado a esto se le llama "aleatorias".
 
-En matematicas y estadistica, esta es la forma elegante a la que llamamos a un valor que obtenemos del azar, y por que lo estamos usando aca? El disparo del lanzamaiz cumple con estas caracteristicas, es un valor (20 o 40 de daño), que obtenemos de una probabilidad. Y dado que ya hubo gente mas desocupada que yo en un pasado que desengloso todas las caracteristicas de estas variables, las usaremos para describir este comportamiento.
+En matematicas y estadistica, esta es la forma elegante a la que llamamos a un valor que obtenemos del azar, y por que lo estamos usando aca? El disparo del lanzamaiz cumple con estas caracteristicas, es un valor (20 o 40 de daño), que obtenemos de una probabilidad (25%). Y dado que ya hubo gente mas desocupada que yo en un pasado que desengloso todas las caracteristicas de estas variables, las usaremos para describir este comportamiento.
 
 ### Valor Esperado
 
-El **valor esperado** de una variable aleatoria suena como algo complicado, pero en realidad, es una idea bastante intuitiva. Imagina que estás jugando a un juego de azar. Podrías preguntarte: "Si juego este juego muchas veces, ¿cuánto puedo esperar ganar o perder en promedio?" Esa respuesta, entenado, es el valor esperado y se calcula de la siguiente manera:
+El **valor esperado** de una variable aleatoria es una idea bastante intuitiva. Imagina que estás jugando a un juego de azar. Podrías preguntarte: "Si juego este juego muchas veces, ¿cuánto puedo esperar ganar o perder en promedio?" Esa respuesta, entenado, es el valor esperado y se calcula de la siguiente manera:
 
 ![](images/clipboard-1392941302.png)
 
@@ -127,7 +127,7 @@ avgs <- c(mean(x), e_value)
 avgs
 ```
 
-### RESPUESTA RAPIDA
+## RESPUESTA RAPIDA
 
 Dado que ya tenemos el valor esperado, podemos calcular de mejor medida cuantos disparos tomaria y ya salimos de esto de una vez
 
@@ -146,6 +146,123 @@ time
 ```
 
 4800 segundos, unos 80 minutitos para que la mejor planta del mundo gane.
+
+## RESPUESTA DE VERDAD
+
+Si bien la respuesta anterior es valida, debemos de tener en cuenta que este es producto de la media de una simulacion de variables aleatorias, lo que lo convierte en una variable aleatoria por si misma, y incluso en ese caso podriamos decir de que si bien, probablemente el Dr. Zomboss haya muerto con esa cantidad de disparos, puede tambien no haberlo hecho, y aqui es donde entra mi querida simulacion de montecarlo.
+
+### Cual es el rango de disparos con el cual el Dr. Zomboss puede morir?
+
+Al inicio les mencione el video que use como referencia dado que particularmente ese valor que dio por respuesta es el valor maximo de disparos con el cual el Dr. Zombos moriria, a continuacion la simulacion que lo demuestra
+
+```{r}
+#Un millon de operaciones, pq podemos
+B <- 1000000
+
+distribution <- replicate(B, {
+  life <- zomboss_hp
+  
+  shots <- sample(c(shot, lucky_shot), 
+                  size = 2000,  
+                  prob = c(1 - lucky_shot_prob, lucky_shot_prob), 
+                  replace = TRUE)
+  
+  cumulative_damage <- cumsum(shots)
+  
+  num_shots <- which(cumulative_damage >= life)[1]  
+  num_shots
+})
+
+```
+
+Como se puede ver, si bien nuestro valor esperado usado es 1600, en un escenario real podemos tener diversos resultados que no calquen exactamente con estos, pero si a un aproximado. Para comprender esto, necesitamos entender dos cosas importantes: la **media** y la **desviación estándar**.
+
+-   La **media** ya la expliqué antes, es básicamente el promedio de los datos.
+
+-   La **desviación estándar** (para hacerla corta) es una medida de qué tanto se dispersan o se separan los datos respecto a la media. Es como decir **"más o menos X cantidad"** alrededor del valor promedio.
+
+```{r}
+dis_mean <- mean(distribution)
+dis_sd <- sd(distribution)
+
+specs <- c(dis_mean, dis_sd)
+names(specs) <- c("mean", "standard_deviation")
+specs
+```
+
+### Visualizacion
+
+La linea roja es la media, y las lineas moradas son la desviacion estandar.
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+```{r, echo=FALSE, fig.width=5, fig.height=3, warning=FALSE}
+data.frame(distribution) %>% 
+  ggplot(aes(distribution)) + 
+  geom_density(size = .7, fill = "gray") +  # Opcional: agregar color al área
+  geom_vline(aes(xintercept = dis_mean), col = "red", size = 1, linetype = "dashed") +
+  geom_vline(aes(xintercept = dis_mean + dis_sd), col = "#431c53", size = 1, linetype = "dotted") + 
+  geom_vline(aes(xintercept = dis_mean - dis_sd), col = "#431c53", size = 1, linetype = "dotted") + 
+  labs(title = "Densidad de la Distribución",
+       x = "Valor de la Distribución",
+       y = "Densidad") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+No se te hace conocida esta grafica? Como que ya la viste en algun lado? Alguna pesadilla? No? Balurde.
+
+Esta grafica es conocida como la campana de gauss o la distribucion normal, que a como puedes ver, tiene por caracteristicas estar trazada centrada simetricamente alrededor de la media de los valores, el obtener esta grafica nos ayuda a comprender la naturaleza de los datos en estudio, y dado asi, podriamos incluso calcular la probabilidad de que X caso suceda, y para no dejar con las ganas, vamos a probar que tal con un par de casos hipoteticos.
+
+### Probabilidades
+
+El calculo de la probabilidad de una funcion normal se define como la densidad del area bajo la curva El cálculo de la probabilidad de una función normal se define como la densidad del área bajo la curva de la distribución normal, delimitada por un intervalo específico, y se obtiene mediante la integración de la función de densidad de probabilidad. Osea la siguiente formula:
+
+La función de densidad de probabilidad de una distribución normal es: $$
+f(x) = \frac{1}{\sigma \sqrt{2\pi}} e^{-\frac{(x - \mu)^2}{2\sigma^2}}
+$$ Para calcular la probabilidad de que $X$ esté entre $a$ y $b$, se utiliza la integral de la función de densidad: $$
+P(a \leq X \leq b) = \int_{a}^{b} \frac{1}{\sigma \sqrt{2\pi}} e^{-\frac{(x - \mu)^2}{2\sigma^2}} \, dx
+$$
+
+**Tuani**, pero estamos en R, entonces vamos a usar una **funcioncita lindita** que nos ahorrará ese cálculo manual.
+
+Con estos los valores de la media y la desviacion estandar, podemos calcular probabilidades fácilmente usando una función en R
+
+### Jugando con valores
+
+Probemos primero la probabilidad de que el Dr. Zomboss haya muerto con los 2000 disparos que menciona el video
+
+```{r}
+pnorm(2000, mean= dis_mean, sd= dis_sd)
+```
+
+Segun la distribucion normal, esta muertisimo, no chances, pero podriamos decir lo mismo de que se muere con 21389128 disparos, no? Queremos datos reales, cuanto es el maximo que ha aguantado en un millon de simulaciones?
+
+```{r}
+max(distribution)
+```
+
+En UN MILLON de intentos, no ha pasado ni de los 1700 disparos, ya ven a lo que me referia al inicio con que era una respuesta muy distopica?
+
+Ahora hablando serial, con que intervalos de confianza te puedo decir que el Dr Zomboss esta muerto
+
+```{r}
+lower_bound <- quantile(distribution, 0.0005)
+upper_bound <- quantile(distribution, 0.9995)
+
+c(lower_bound, upper_bound)
+```
+
+TE LO JURO, te lo prometo dogs, que en un 99.9% de las ocasiones te va a tomar entre 1554 a 1646 disparos y por lo tanto te digo que te va a tomar
+
+```{r}
+times <- shot_interval * c(lower_bound, upper_bound)
+times/60
+```
+
+entre 77.7 y 82.3 minutitos doctor.
 
 ## Conclusion
 
